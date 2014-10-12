@@ -12,7 +12,6 @@ a:hover {
   text-decoration:underline;
 }
 .navigation {
-
   background-color:#DFE9E9;
   text-align:center;
   width:100%;
@@ -60,6 +59,7 @@ a:hover {
 
 .content {
   padding:25px;
+  padding-bottom:15px;
 }
 
 .challenge {
@@ -106,4 +106,67 @@ a:hover {
 }
 .selector span:hover {
   cursor:pointer;
+}
+.ucp {
+  text-align:center;
+  font-size:1.2em;
+}
+.ucp div.par {
+  background-color:#DFE9E9;
+  padding:25px;
+  text-align:center;
+  margin:15px auto;
+}
+.ucp div.container {
+  display: table;
+  text-align:center;
+  margin:0px auto;
+}
+.ucp form input {
+  font-size:1.1em;
+}
+.ucp form div.item {
+  display: table-row; 
+}
+.ucp form div.item label {
+  display: table-cell;
+  text-align:right;
+  padding:5px;
+  vertical-align:middle;
+}
+.ucp form div.item input {
+  display: table-cell;
+  text-align:left;
+  padding:5px;
+  width:300px;
+ }
+ .ucp form div.item textarea {
+  display: table-cell;
+  text-align:left;
+  padding:5px;
+  font-size:1em;
+  width:300px;
+  height:50px;
+ }
+.ucp form div.item select  {
+  display:table-cell;
+  text-align:left;
+  padding:5px;
+  margin-top:none;
+  font-size:1.2em;
+  width:313px;
+}
+.ucp form button {
+  font-size:1.2em;
+  border:1px solid black;
+  padding:5px;
+  margin:3px auto;
+}
+.chosen-container-single .chosen-single {
+  background-color:#fff;
+}
+.chosen-container .chosen-results li.highlighted {
+  background-color: #eee;
+  background-image: none;
+  color: #000;
 }

@@ -61,7 +61,7 @@ $(function() {
 <body>
 <?php include("navigation.html"); ?>
 <div class="content">
-  <div class="selector"><span>Web</span><span>Reversing</span><span>Exploitation</span><span>Crypto</span><span>Binary</span><span>Forensics</span><span>Networking</span><a href="javascript:collapseAll();">Collapse All</a> <a href="javascript:expandAll();">Expand All</a> <a href="javascript:showAll();">Show All</a></div>
+  <div class="selector"><span>Web</span><span>Reversing</span><span>Exploitation</span><span>Crypto</span><span>Binary</span><span>Forensics</span><span>Networks</span><a href="javascript:collapseAll();">Collapse All</a> <a href="javascript:expandAll();">Expand All</a> <a href="javascript:showAll();">Show All</a></div>
   <div class="challenges">
     <div class="challenge">
       <div class="title">ChalName | Author | Points | SolvedCount <div class="class">Web</div></div>
@@ -84,7 +84,7 @@ $(function() {
       <div class="details">Description Here<br />more description</div>
     </div>
     <div class="challenge">
-      <div class="title">ChalName | Author | Points | SolvedCount <div class="class">Networking Forensics</div></div>
+      <div class="title">ChalName | Author | Points | SolvedCount <div class="class">Networks Forensics</div></div>
       <div class="details">Description Here<br />more description</div>
     </div>
   </div>
