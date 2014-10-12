@@ -1,0 +1,109 @@
+html, body {
+  margin:0px;
+  padding:0px;
+  background-color:#F5F8F8;
+  font-family: 'Open Sans', sans-serif;
+}
+a {
+  text-decoration:none;
+  color:#050F0A;
+}
+a:hover {
+  text-decoration:underline;
+}
+.navigation {
+
+  background-color:#DFE9E9;
+  text-align:center;
+  width:100%;
+}
+.navigation div.container {
+  padding:10px 35px;
+}
+.navigation ul{
+  list-style-type: none;
+  margin: 0;
+  padding:5px 0px;
+}
+.navigation ul li {
+  display: inline;
+  height:20px;
+  margin:0px 15px;
+  font-size:1.1em;
+}
+.navigation ul li a {
+  font-weight:bold;
+  color:#000;
+}
+
+#user_info {
+  font-size:.8em;
+  float:right;
+  width:300px;
+  margin:0px auto;
+  text-align:right;
+  padding-right:50px;
+  font-weight:bold;
+}
+
+#logo {
+  float:left;
+  width:115px;
+  height:50px;
+  padding:10px;
+  font-size:1.5em;
+}
+#logo a {
+  color:#000;
+  text-decoration:none;
+}
+
+.content {
+  padding:25px;
+}
+
+.challenge {
+  margin:5px 50px;
+}
+.challenge div.title {
+  text-align:left;
+  margin:0px;
+  padding:0px;
+  font-size:1.2em;
+  padding:10px;
+  background-color:#CC8080;
+}
+.challenge div.solved {
+  background-color:#80CC80;
+}
+.challenge div.title:hover {
+  cursor:pointer;
+}
+.challenge div.details {
+  background-color:#fff;
+  padding:2px 10px;
+  display:none;
+}
+.challenge div.class {
+  float:right;
+  text-align:right;
+}
+.selector {
+  font-size:1.2em;
+  text-align:center;
+  margin-bottom:25px;
+}
+.selector span {
+  display: inline;
+  margin:5px;
+  padding:10px 25px;
+}
+.selector span.on {
+  background-color:#80CC80;
+}
+.selector span.off {
+  background-color:#808080;
+}
+.selector span:hover {
+  cursor:pointer;
+}
