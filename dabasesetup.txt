@@ -1,0 +1,54 @@
+CREATE SCHEMA 'communityctf';
+
+CREATE TABLE `communityctf`.`users` (
+  `name` VARCHAR(40) NOT NULL,
+  `password` CHAR(60) NULL,
+  `email` VARCHAR(50) NULL,
+  `org` VARCHAR(75) NULL,
+  `rank` INT NULL DEFAULT 0,
+  `approved` INT NULL DEFAULT 0,
+  `timestamp` DATETIME NULL,
+  PRIMARY KEY (`name`));
+
+  CREATE TABLE `communityctf`.`categories` (
+  `category` VARCHAR(25) NOT NULL,
+  `img` VARCHAR(75) NULL,
+  PRIMARY KEY (`category`));
+
+  CREATE TABLE `communityctf`.`challenges` (
+  `title` VARCHAR(35) NOT NULL,
+  `owner` VARCHAR(45) NOT NULL,
+  `category` VARCHAR(45) NULL,
+  `count` INT NULL DEFAULT 0,
+  `flag` VARCHAR(200) NULL,
+  `hint` VARCHAR(1500) NULL,
+  PRIMARY KEY (`title`, `owner`),
+  INDEX `category_idx` (`category` ASC),
+  INDEX `owner_idx` (`owner` ASC),
+  CONSTRAINT `category`
+    FOREIGN KEY (`category`)
+    REFERENCES `communityctf`.`categories` (`category`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `owner`
+    FOREIGN KEY (`owner`)
+    REFERENCES `communityctf`.`users` (`name`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+COMMENT = '	';
+
+CREATE TABLE `communityctf`.`activity` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `ip` VARCHAR(45) NULL,
+  `description` VARCHAR(300) NOT NULL,
+  `timestamp` DATETIME NULL,
+  `user` VARCHAR(40) NULL,
+  PRIMARY KEY (`id`));
+  
+  ALTER TABLE `communityctf`.`users` 
+ADD COLUMN `session` VARCHAR(64) NULL DEFAULT NULL AFTER `timestamp`,
+ADD COLUMN `session_timestamp` DATETIME NULL DEFAULT NULL AFTER `session`;
+
+ALTER TABLE `communityctf`.`challenges` 
+ADD COLUMN `approved` INT NULL DEFAULT 0 AFTER `hint`;
+

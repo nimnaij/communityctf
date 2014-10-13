@@ -31,6 +31,7 @@ $(function() {
   $(".chosen-select").chosen();
 });
 </script>
+<?php include("head.php"); ?>
 </head>
 
 <body>

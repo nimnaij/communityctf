@@ -111,7 +111,7 @@ a:hover {
   text-align:center;
   font-size:1.2em;
 }
-.ucp div.par {
+.ucp div.par, .textbox {
   background-color:#DFE9E9;
   padding:25px;
   text-align:center;
@@ -169,4 +169,17 @@ a:hover {
   background-color: #eee;
   background-image: none;
   color: #000;
+}
+.error {
+  margin:0px auto;
+  width:500px;
+  border: 1px dashed #CC8080;
+  padding: 15px;
+}
+.success {
+  margin:0px auto;
+  width:500px;
+  border: 1px dashed #80CC80;
+  padding:15px;
+  text-align:center;
 }

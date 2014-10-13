@@ -56,6 +56,7 @@ $(function() {
   });
 });
 </script>
+<?php include("head.php"); ?>
 </head>
 
 <body>
