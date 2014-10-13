@@ -24,4 +24,14 @@ function log_activity($mysqli, $activity, $user="") {
   }
   $stmt->close();
 }
+
+function newline_to_ul_list($str) {
+  $out = "<ul>\n";
+  $lines = explode("\n",$str);
+  foreach ($lines as $line) {
+    if($line !="") $out .="<li>".$line."</li>\n";
+  }
+  $out .="</ul>\n";
+  return $out;
+}
 ?>

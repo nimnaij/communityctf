@@ -64,68 +64,59 @@ function logout() {
   header("Cache-Control: no-cache, must-revalidate");
 }
 
-function newline_to_ul_list($str) {
-  $out = "<ul>\n";
-  $lines = explode("\n",$str);
-  foreach ($lines as $line) {
-    if($line !="") $out .="<li>".$line."</li>\n";
-  }
-  $out .="</ul>\n";
-  return $out;
-}
 
 function check_reg() {
   if(isset($_POST["user"]) && isset($_POST["pass"]) && isset($_POST["pass2"]) && isset($_POST["email"]) && isset($_POST["org"])) {
-    $results["results"] = 1;
-    $results["msg"] = "";
+    $r["results"] = 1;
+    $r["msg"] = "";
     
     //check username length
     if(!strlen($_POST["user"])>0) {
-      $results["results"] = 0;
-      $results["msg"] .= "Username must be at least 1 character long.\n";
+      $r["results"] = 0;
+      $r["msg"] .= "Username must be at least 1 character long.\n";
     }
     
     //check username for alphanumeric only
     if(preg_match('/[^a-zA-Z0-9_]/', $_POST["user"])) {
-      $results["results"] = 0;
-      $results["msg"] .= "This is America, only alphanumeric and underscores allowed.\n";
+      $r["results"] = 0;
+      $r["msg"] .= "This is America, only alphanumeric and underscores allowed.\n";
     }
     
     //passwords must match
     if($_POST["pass"]!=$_POST["pass2"]) {
-      $results["results"] = 0;
-      $results["msg"] .= "Fatfingered the password, try again.\n";
+      $r["results"] = 0;
+      $r["msg"] .= "Fatfingered the password, try again.\n";
     }
     
     //password must be >= PASS_LEN
     if(!strlen($_POST["pass"])>=PASS_LEN) {
-      $results["results"] = 0;
-      $results["msg"] .= "Password needs to be at least ".PASS_LEN." characters long.\n";
+      $r["results"] = 0;
+      $r["msg"] .= "Password needs to be at least ".PASS_LEN." characters long.\n";
     }
     
     //check for valid email. not a perfect function but it's good enough for me
     if(!filter_var($_POST["email"], FILTER_VALIDATE_EMAIL)) {
-      $results["results"] = 0;
-      $results["msg"] .= "Invalid email.\n";
+      $r["results"] = 0;
+      $r["msg"] .= "Invalid email.\n";
     }
     
     //check organization length
     if(strlen($_POST["org"])<3) {
-      $results["results"] = 0;
-      $results["msg"] .= "Please include what organization you are affiliated with.\n";
+      $r["results"] = 0;
+      $r["msg"] .= "Please include what organization you are affiliated with.\n";
     }
     //check organization. Mostly just want to keep out HTML from this one. Prepared statements will take care of injections.
     if(preg_match('/[^a-zA-Z0-9_\s\'\"]/', $_POST["org"])) {
-      $results["results"] = 0;
-      $results["msg"] .= "What type of organization is that? Try again using less-weird characters.\n";
+      $r["results"] = 0;
+      $r["msg"] .= "What type of organization is that? Try again using less-weird characters.\n";
     }
     
   } else {
     if(!(isset($_POST["user"]) || isset($_POST["pass"]) && isset($_POST["pass2"]) || isset($_POST["email"]) || isset($_POST["org"]))) {
-      $results = array('results' => -1, 'msg' => "");
-    } else $results = array('results' => 0, 'msg' => "All fields are required.");
+      $r = array('results' => -1, 'msg' => "");
+    } else $r = array('results' => 0, 'msg' => "All fields are required.");
   }
-    return $results;
+    return $r;
 }
 
 function generate_registration_form() {
@@ -172,7 +163,7 @@ function registration() {
   }
   //if we're ajax, we output json
   if(isset($_POST["ajax"])) {
-    echo json_encode($results);
+    echo json_encode($r);
     die();
   }
   //otherwise, plop it in output so it can be shown on main
@@ -192,8 +183,8 @@ function login() {
     $output .= generate_login_form();
     return;
   }
-  $results["results"] = 0;
-  $results["msg"] = "Incorrect Login.\n";
+  $r["results"] = 0;
+  $r["msg"] = "Incorrect Login.\n";
   //check username for alphanumeric only
 
   if(!preg_match('/[^a-zA-Z0-9_]/', $_POST["user"])) {  
@@ -216,9 +207,9 @@ function login() {
         echo "should be logged in here...";
         $_SESSION["user"] = $user_info["name"];
         $_SESSION["rank"] = $user_info["rank"];
-        log_activity($mysqli, "logged in", $user_info["rank"]);
-        $results["results"] = 1;
-        $results["msg"] = "";
+        log_activity($mysqli, "logged in", $user_info["name"]);
+        $r["results"] = 1;
+        $r["msg"] = "";
         //set long-term cookie
         $date = date("Y-m-d H:i:s", time());
         $secret = $user_info["password"].$date;
@@ -239,15 +230,15 @@ function login() {
   }
   
   if(isset($_POST["ajax"])) {
-    echo json_encode($results);
+    echo json_encode($r);
     die();
   }
   
-  if($results["results"]==1) {
+  if($r["results"]==1) {
     header("Location: ./");
     die();
   } else {
-    if($results["msg"]!="") $output .="<div class='error'>".newline_to_ul_list($results["msg"])."</div>";
+    if($r["msg"]!="") $output .="<div class='error'>".newline_to_ul_list($r["msg"])."</div>";
     $output .= generate_login_form();
   }
   
