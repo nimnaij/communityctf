@@ -52,3 +52,22 @@ ADD COLUMN `session_timestamp` DATETIME NULL DEFAULT NULL AFTER `session`;
 ALTER TABLE `communityctf`.`challenges` 
 ADD COLUMN `approved` INT NULL DEFAULT 0 AFTER `hint`;
 
+CREATE TABLE `communityctf`.`user_scores` (
+  `user` VARCHAR(40) NOT NULL,
+  `challenge` VARCHAR(35) NOT NULL,
+  `owner` VARCHAR(40) NOT NULL,
+  `timestamp` DATETIME NULL,
+  `ip` VARCHAR(45) NULL,
+  INDEX `name_idx` (`user` ASC),
+  INDEX `challenge_idx` (`challenge` ASC),
+  CONSTRAINT `name`
+    FOREIGN KEY (`user`)
+    REFERENCES `communityctf`.`users` (`name`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `challenge`
+    FOREIGN KEY (`challenge`)
+    REFERENCES `communityctf`.`challenges` (`title`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION);
+

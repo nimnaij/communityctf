@@ -188,6 +188,7 @@ $mysqli->close();
 
 // TO DO: add debugger entries.
 // TO DO: fix multiple categories bug
+// TO DO: add ajax support
 
 ?>
 <!DOCTYPE html>

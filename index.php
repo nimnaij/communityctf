@@ -5,7 +5,9 @@ define("THEME", "default");
 define("TITLE", "communityCTF");
 define("DB_SERVER", "localhost");
 define("DB_USER", "root");
+//define("DB_USER", "ctf");
 define("DB_PASS", NULL);
+//define("DB_PASS", "3undienxzmfufdme");
 define("DB", "communityctf");
 define("PASS_COST", 5); // increase the cost for bcrypt hashing
 define("PASS_LEN", 6); //min password length
