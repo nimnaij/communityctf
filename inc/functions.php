@@ -41,4 +41,12 @@ $base = BASE_SCORE;
   }
   return $base/$count;
 }
+
+//regexps
+define('ORG_PATTERN', '/[^a-zA-Z0-9_\s\'\"]/');
+define('TITLE_PATTERN','/[^a-zA-Z0-9_]/');
+define('FLAG_PATTERN', '/[^a-zA-Z0-9"]/');
+define('CAT_PATTERN', '/[^a-zA-Z0-9\s]/');
+define('USER_PATTERN', '/[^a-zA-Z0-9_]/');
+
 ?>

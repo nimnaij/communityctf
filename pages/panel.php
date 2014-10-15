@@ -8,6 +8,9 @@ $user_challenges = array();
 $categories = array();
 $mysqli = setup_database();
 
+
+
+
 $stmt = $mysqli->prepare("SELECT * from categories");
 if (!$stmt->execute()) {
   die("Execute failed: Get admin for help.");
@@ -47,7 +50,7 @@ if(isset($_POST['new-email']) && isset($_POST['new-password2']) && isset($_POST[
     $r["msg"] .= "Please include what organization you are affiliated with.\n";
   }
   //check organization. Mostly just want to keep out HTML from this one. Prepared statements will take care of injections.
-  if(preg_match('/[^a-zA-Z0-9_\s\'\"]/', $_POST["new-org"])) {
+  if(preg_match(ORG_PATTERN, $_POST["new-org"])) {
     $r["results"] = 0;
     $r["msg"] .= "What type of organization is that? Try again using less-weird characters.\n";
   }
@@ -60,12 +63,8 @@ if(isset($_POST['new-email']) && isset($_POST['new-password2']) && isset($_POST[
       die("Execute failed: Get admin for help.");
     }
     $stmt->close();
-   
-    $output .="<div class='success'>Information updated!</div>";
-  } else {
-    if($r["msg"]!="") $output .="<div class='error'>".newline_to_ul_list($r["msg"])."</div>";
-  }
-
+    $r["msg"] = "Information updated!";
+  } 
 } else if(isset($_POST['new-title']) && isset($_POST['new-category']) && isset($_POST['new-hint']) && isset($_POST['new-flag'])) {
   $r["results"] = 1;
   $r["msg"] = "";
@@ -74,11 +73,11 @@ if(isset($_POST['new-email']) && isset($_POST['new-password2']) && isset($_POST[
     $r["msg"] .= "Please include a longer title.\n";
   }
   //check title
-  if(preg_match('/[^a-zA-Z0-9_\s\'\"]/', $_POST["new-title"])) {
+  if(preg_match(TITLE_PATTERN, $_POST["new-title"])) {
     $r["results"] = 0;
     $r["msg"] .= "Please adjust your challenge title. The rules: /[^a-zA-Z0-9_\s\'\"]/ \n";
   }
-  if(preg_match('/[^a-zA-Z0-9\s"]/', $_POST["new-category"])) {
+  if(preg_match(CAT_PATTERN, $_POST["new-category"])) {
     $r["results"] = 0;
     $r["msg"] .= "Please use an approved category. \n";
   } else {
@@ -89,9 +88,9 @@ if(isset($_POST['new-email']) && isset($_POST['new-password2']) && isset($_POST[
       }
     }
   }
-  if(preg_match('/[^a-zA-Z0-9\s"]/', $_POST["new-flag"]) || strlen($_POST["new-flag"])<8) {
+  if(preg_match(FLAG_PATTERN, $_POST["new-flag"]) || strlen($_POST["new-flag"])<8) {
     $r["results"] = 0;
-    $r["msg"] .= "Flags must be alphanumeric and greater than 10 characters \n";
+    $r["msg"] .= "Flags must be alphanumeric and greater than 8 characters \n";
   }
   if(strlen($_POST["new-hint"])>1125) {
     $r["results"] = 0;
@@ -105,11 +104,9 @@ if(isset($_POST['new-email']) && isset($_POST['new-password2']) && isset($_POST[
       die("Execute failed: Get admin for help!");
     }
     $stmt->close();
-   
-    $output .="<div class='success'>Your challenge has been added!</div>";
-  } else {
-    if($r["msg"]!="") $output .="<div class='error'>".newline_to_ul_list($r["msg"])."</div>";
-  }
+    log_activity($mysqli, "added challenge ".$_POST['new-title'], $_SESSION["user"]);
+    $r["msg"] = "You challenge has been added.";
+  } 
 } else if(isset($_POST['edit-title']) && isset($_POST['edit-category']) && isset($_POST['edit-hint']) && isset($_POST['edit-flag']) && isset($_POST["edit-prev-title"])) {
 echo $_POST['edit-category'];
   $r["results"] = 1;
@@ -119,11 +116,11 @@ echo $_POST['edit-category'];
     $r["msg"] .= "Please include a longer title.\n";
   }
   //check title
-  if(preg_match('/[^a-zA-Z0-9_\s\'\"]/', $_POST["edit-title"]) || preg_match('/[^a-zA-Z0-9_\s\'\"]/', $_POST["edit-prev-title"])) {
+  if(preg_match(TITLE_PATTERN, $_POST["edit-title"]) || preg_match(TITLE_PATTERN, $_POST["edit-prev-title"])) {
     $r["results"] = 0;
-    $r["msg"] .= "Please adjust your challenge title. The rules: /[^a-zA-Z0-9_\s\'\"]/ \n";
+    $r["msg"] .= "Please adjust your challenge title. The rules: ".TITLE_PATTERN."\n";
   }
-  if(preg_match('/[^a-zA-Z0-9\s"]/', $_POST["edit-category"])) {
+  if(preg_match(CAT_PATTERN, $_POST["edit-category"])) {
     $r["results"] = 0;
     $r["msg"] .= "Please use an approved category. \n";
   } else {
@@ -134,7 +131,7 @@ echo $_POST['edit-category'];
       }
     }
   }
-  if(preg_match('/[^a-zA-Z0-9\s"]/', $_POST["edit-flag"]) || strlen($_POST["edit-flag"])<8) {
+  if(preg_match(FLAG_PATTERN, $_POST["edit-flag"]) || strlen($_POST["edit-flag"])<8) {
     $r["results"] = 0;
     $r["msg"] .= "Flags must be alphanumeric and greater than 10 characters \n";
   }
@@ -142,7 +139,7 @@ echo $_POST['edit-category'];
     $r["results"] = 0;
     $r["msg"] .= "Your hint is too long. Limit is 1125 characters. \n";
   }
-  if($r["results"] ==1) { //INSERT INTO challenges(title,owner,category,flag,hint) VALUES (?,?,?,?,?)
+  if($r["results"] ==1) { 
     $stmt = $mysqli->prepare("UPDATE challenges set title=?, category=?, flag=?, hint=? WHERE owner = ? AND title=?");
     $hint = base64_encode($_POST["edit-hint"]);
     $stmt->bind_param("ssssss", $_POST["edit-title"], $_POST["edit-category"], $_POST["edit-flag"], $hint, $_SESSION["user"], $_POST["edit-prev-title"]);
@@ -150,10 +147,55 @@ echo $_POST['edit-category'];
       die("Execute failed: Get admin for help!");
     }
     $stmt->close();
-   
-    $output .="<div class='success'>Your challenge has been updated!</div>";
+    log_activity($mysqli, "updated challenge ".$_POST['edit-prev-title'].":".$_POST['edit-title'], $_SESSION["user"]);
+    $r["msg"] = "Your challenge has been updated.";
+  } 
+} else if(isset($_POST['del-title'])) {
+  if(preg_match(TITLE_PATTERN, $_POST["del-title"])) {
+    $r["results"] = 0;
+    $r["msg"] .= "Flags must be alphanumeric and greater than 10 characters \n";
   } else {
-    if($r["msg"]!="") $output .="<div class='error'>".newline_to_ul_list($r["msg"])."</div>";
+    //check to see if user actually owns the challenge and is authorized to delete it. 
+    $stmt = $mysqli->prepare("SELECT * from challenges where title = ? and owner = ?");
+    $stmt->bind_param("ss", $_POST["del-title"], $_SESSION["user"]);
+    if (!$stmt->execute()) {
+      die("Execute failed: Get admin for help.");
+    }
+    $stmt->store_result();
+    if($stmt->num_rows!=1 && $_SESSION['rank']<2) {
+      $r["msg"] .= "I can't let you do that, Star Fox. (Someone else owns that challenge).";
+      $r["results"] = 0;
+    } else {
+      $stmt->close();
+      //first delete from user scores table. 
+      $stmt = $mysqli->prepare("DELETE from user_scores where challenge = ? and owner = ?");
+      $stmt->bind_param("ss", $_POST["del-title"], $_SESSION["user"]);
+      if (!$stmt->execute()) {
+        die("Execute failed: Get admin for help.");
+      }
+      $stmt->close();
+      // now delete from challenges table. 
+      $stmt = $mysqli->prepare("DELETE from challenges where title = ? and owner = ?");
+      $stmt->bind_param("ss", $_POST["del-title"], $_SESSION["user"]);
+      if (!$stmt->execute()) {
+        die("Execute failed: Get admin for help.");
+      }
+      $r["results"] = 1;
+      $r["msg"] = "Your challenge was successfully deleted.";
+      log_activity($mysqli, "deleted challenge ".$_POST['del-title'], $_SESSION["user"]);
+    }
+    $stmt->close();
+  }
+}
+if(isset($r)) {
+  if(isset($_POST['ajax'])) {
+    echo json_encode($r);
+    die();
+  }
+  if($r["results"] == 1 && $r["msg"]!="") {
+    $output .="<div class='success'>".$r["msg"]."</div>";
+  } else {
+    $output .="<div class='error'>".newline_to_ul_list($r["msg"])."</div>";
   }
 }
 
@@ -329,6 +371,11 @@ foreach ($categories as $cat) {
           </div>      
           <input type="hidden" name="edit-prev-title" value="<?php echo $chal['title']; ?>">
           <button form="edit-<?php echo $count ?>" type="submit">Update</button>
+        </form>
+        <br />
+        <form action="?p=panel" method="POST" id="del-<?php echo $count; ?>">
+          <input type="hidden" name="del-title" value="<?php echo $chal['title']; ?>">
+          <button form="del-<?php echo $count ?>" type="submit" onclick="return(confirm('Are you sure? Deleting this challenge will delete all user scores associated with it as well.'))">Delete</button>
         </form>
       </div>
         <?php

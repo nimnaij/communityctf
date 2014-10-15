@@ -79,7 +79,7 @@ function check_reg() {
     }
     
     //check username for alphanumeric only
-    if(preg_match('/[^a-zA-Z0-9_]/', $_POST["user"])) {
+    if(preg_match(USER_PATTERN, $_POST["user"])) {
       $r["results"] = 0;
       $r["msg"] .= "This is America, only alphanumeric and underscores allowed.\n";
     }
@@ -108,7 +108,7 @@ function check_reg() {
       $r["msg"] .= "Please include what organization you are affiliated with.\n";
     }
     //check organization. Mostly just want to keep out HTML from this one. Prepared statements will take care of injections.
-    if(preg_match('/[^a-zA-Z0-9_\s\'\"]/', $_POST["org"])) {
+    if(preg_match(ORG_PATTERN, $_POST["org"])) {
       $r["results"] = 0;
       $r["msg"] .= "What type of organization is that? Try again using less-weird characters.\n";
     }
@@ -189,7 +189,7 @@ function login() {
   $r["msg"] = "Incorrect Login.\n";
   //check username for alphanumeric only
 
-  if(!preg_match('/[^a-zA-Z0-9_]/', $_POST["user"])) {  
+  if(!preg_match(USER_PATTERN, $_POST["user"])) {  
     $mysqli = setup_database();
 
     $pass = password_hash($_POST["pass"], PASSWORD_BCRYPT);
