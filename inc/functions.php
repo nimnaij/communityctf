@@ -34,4 +34,11 @@ function newline_to_ul_list($str) {
   $out .="</ul>\n";
   return $out;
 }
+function calc_score($count) {
+$base = BASE_SCORE;
+  if($count<1) {
+    return $base;
+  }
+  return $base/$count;
+}
 ?>

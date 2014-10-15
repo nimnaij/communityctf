@@ -13,7 +13,7 @@ define("PASS_COST", 5); // increase the cost for bcrypt hashing
 define("PASS_LEN", 6); //min password length
 define("LOGGING", True); // logs every user action in activity table
 define("COOKIE", True);
-
+define("BASE_SCORE", 1000);
 // inclusions
 require_once("inc/functions.php");
 

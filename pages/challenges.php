@@ -3,6 +3,35 @@
 if (session_id() == '') {
     die();
 }
+$challenges = array();
+$categories = array();
+
+$mysqli = setup_database();
+
+$stmt = $mysqli->prepare("SELECT * from categories");
+if (!$stmt->execute()) {
+  die("Execute failed: Get admin for help.");
+}
+$res = $stmt->get_result();
+while($row= $res->fetch_assoc()) {
+  $categories[] = $row["category"];
+}
+$res->close();
+$stmt->close(); 
+
+
+$stmt = $mysqli->prepare("SELECT * from challenges");
+if (!$stmt->execute()) {
+  die("Execute failed: Get admin for help.");
+}
+$res = $stmt->get_result();
+while($row= $res->fetch_assoc()) {
+  $challenges[] = $row;
+}
+$res->close();
+$stmt->close(); 
+
+$mysqli->close();
 ?>
 <!DOCTYPE html>
 <html>
@@ -62,32 +91,18 @@ $(function() {
 <body>
 <?php include("navigation.html"); ?>
 <div class="content">
-  <div class="selector"><span>Web</span><span>Reversing</span><span>Exploitation</span><span>Crypto</span><span>Binary</span><span>Forensics</span><span>Networks</span><a href="javascript:collapseAll();">Collapse All</a> <a href="javascript:expandAll();">Expand All</a> <a href="javascript:showAll();">Show All</a></div>
+  <div class="selector">
+<?php foreach ($categories as $cat) { ?>
+    <span><?php echo $cat; ?></span>
+<?php } ?>
+    <a href="javascript:collapseAll();">Collapse All</a> <a href="javascript:expandAll();">Expand All</a> <a href="javascript:showAll();">Show All</a></div>
   <div class="challenges">
+<?php foreach ($challenges as $chal) { ?>
     <div class="challenge">
-      <div class="title">ChalName | Author | Points | SolvedCount <div class="class">Web</div></div>
-      <div class="details">Description Here<br />more description</div>
+      <div class="title"><?php echo $chal['title']; ?> | <?php echo $chal['owner']; ?> | <?php echo calc_score($chal['count']); ?> | Solved <?php echo $chal['count'];?> times<div class="class"><?php echo $chal['category']; ?></div></div>
+      <div class="details"><?php echo base64_decode($chal['hint']); ?></div>
     </div>
-    <div class="challenge">
-      <div class="title">ChalName | Author | Points | SolvedCount <div class="class">Binary</div></div>
-      <div class="details">Description Here<br />more description</div>
-    </div>
-    <div class="challenge">
-      <div class="title">ChalName | Author | Points | SolvedCount <div class="class">Reversing</div></div>
-      <div class="details">Description Here<br />more description</div>
-    </div>
-    <div class="challenge">
-      <div class="title">ChalName | Author | Points | SolvedCount <div class="class">Web Crypto</div></div>
-      <div class="details">Description Here<br />more description</div>
-    </div>
-    <div class="challenge">
-      <div class="title">ChalName | Author | Points | SolvedCount <div class="class">Forensics</div></div>
-      <div class="details">Description Here<br />more description</div>
-    </div>
-    <div class="challenge">
-      <div class="title">ChalName | Author | Points | SolvedCount <div class="class">Networks Forensics</div></div>
-      <div class="details">Description Here<br />more description</div>
-    </div>
+<?php } ?>
   </div>
 </body>
 
