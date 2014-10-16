@@ -200,13 +200,12 @@ function login() {
       die("Execute failed: Get admin for help.");
     }
     $res = $stmt->get_result();
-    echo "query executed";
 
     if($res->num_rows == 1) {
     //TO DO: check if approved here. Currently we don't care because there's no approval system.
       $user_info = $res->fetch_assoc();
       if(password_verify($_POST["pass"],$user_info["password"])) {
-        echo "should be logged in here...";
+
         $_SESSION["user"] = $user_info["name"];
         $_SESSION["rank"] = $user_info["rank"];
         log_activity($mysqli, "logged in", $user_info["name"]);

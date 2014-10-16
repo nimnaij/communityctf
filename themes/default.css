@@ -135,6 +135,7 @@ a:hover {
   vertical-align:middle;
 }
 .ucp form div.item input {
+  font-family: 'Open Sans', sans-serif;
   display: table-cell;
   text-align:left;
   padding:5px;
@@ -182,4 +183,8 @@ a:hover {
   border: 1px dashed #80CC80;
   padding:15px;
   text-align:center;
+}
+.sub-form input {
+  border:1px solid black;
+  font-family: 'Open Sans', sans-serif;
 }
