@@ -188,3 +188,25 @@ a:hover {
   border:1px solid black;
   font-family: 'Open Sans', sans-serif;
 }
+.scoreboard {
+  margin:4px 75px;
+  text-align:center;
+}
+.scoreboard table {
+  margin: 0px auto;
+  width:800px;
+  border: 0;
+  padding: 0;
+  border-collapse:collapse;
+}
+.scoreboard table tr td {
+  border-top: 1px solid #333;
+  margin:0px;
+  padding:5px;
+}
+.scoreboard table tr.title td {
+  border:none;
+  font-weight:bold;
+  font-size:1.2em;
+}
+

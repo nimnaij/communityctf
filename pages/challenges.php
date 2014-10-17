@@ -168,7 +168,7 @@ if($output != "") {
   <div class="selector">
 <?php foreach ($categories as $cat) { ?>
     <span><?php echo $cat; ?></span>
-<?php } ?>
+<?php } ?><br /><br />
     <a href="javascript:collapseAll();">Collapse All</a> <a href="javascript:expandAll();">Expand All</a> <a href="javascript:showAll();">Show All</a></div>
   <div class="challenges">
 <?php foreach ($challenges as $chal) { ?>
