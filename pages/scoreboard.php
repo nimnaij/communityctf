@@ -6,7 +6,7 @@ if (session_id() == '') {
 
 $mysqli = setup_database();
 
-$stmt = $mysqli->prepare("select users.name,users.rank,users.org,SUM(".BASE_SCORE."/challenges.count) as 'score' from users left join user_scores on users.name = user_scores.user left join challenges on user_scores.challenge = challenges.title and user_scores.owner = challenges.owner where challenges.count>0 group by users.name order by score DESC");
+$stmt = $mysqli->prepare("select users.name,users.rank,users.org,SUM(".BASE_SCORE."/challenges.count) as 'score' from users left join user_scores on users.name = user_scores.user left join challenges on user_scores.challenge = challenges.title and user_scores.owner = challenges.owner where challenges.count>0 group by users.name order by score DESC, user_scores.timestamp ASC");
 if (!$stmt->execute()) {
   die("Execute failed: Get admin for help.");
 }

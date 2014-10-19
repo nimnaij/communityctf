@@ -4,6 +4,22 @@ if (session_id() == '') {
     die();
 }
 global $output;
+
+$mysqli = setup_database();
+
+$activity_feed = array();
+$stmt = $mysqli->prepare("select user,description,timestamp from activity order by timestamp desc limit 25;");
+if (!$stmt->execute()) {
+  die("Execute failed: Get admin for help.");
+}
+$res = $stmt->get_result();
+while($row= $res->fetch_assoc()) {
+  $activity_feed[] = $row;
+}
+$res->close();
+$stmt->close(); 
+
+$mysqli->close();
 ?>
 <!DOCTYPE html>
 <html>
@@ -25,7 +41,15 @@ if($output != "") {
   echo $output;
 } else { ?>
 
-
+<div class="scoreboard">
+  <h2>Activity Feed</h2>
+  <?php 
+foreach ($activity_feed as $activity) {
+  $msg = explode("with flag",$activity["description"]);
+  $msg = $activity["user"]." ".$msg[0]."; timestamp: ".$activity["timestamp"];
+  echo "<span>".$msg."</span><br />";
+} ?>
+</div>
 <?php } ?>
 </div>
 

@@ -19,11 +19,11 @@ require_once("inc/functions.php");
 
 
 //functions
-//TO DO: implement cookie lookup in DB
+
 function check_cookie($cookie) {
   if(!COOKIE) return false;
   if(isset($_COOKIE["track"]) && !isset($_SESSION["user"]) && !isset($_SESSION["rank"])) {
-    if(strlen($_COOKIE["track"])!=64 | preg_match('/[^a-z0-9]/', $_COOKIE["track"])) return false;
+    if(strlen($_COOKIE["track"])!=64 || preg_match('/[^a-z0-9]/', $_COOKIE["track"])) return false;
   
     $mysqli = setup_database();
     
@@ -40,12 +40,12 @@ function check_cookie($cookie) {
       $expected = hash_hmac('sha256', $user_info["name"].$user_info["rank"], $secret);
       if(md5($expected)==md5($_COOKIE["track"])) {
         $_SESSION["user"] = $user_info["name"];
-        $_Session["rank"] = $user_info["rank"];
+        $_SESSION["rank"] = $user_info["rank"];
         $res->close();
         $stmt->close();
         $mysqli->close();
         return true;
-      }
+      } 
     }
   $res->close();
   $stmt->close();
@@ -55,15 +55,19 @@ function check_cookie($cookie) {
 }
 
 function logout() {
+  $mysqli = setup_database();
+  $stmt = $mysqli->prepare("UPDATE users set session='' WHERE name = ?");
+  $stmt->bind_param("s", $_SESSION["user"]);
+  
+  if (!$stmt->execute()) {
+    echo "could not completely log you out. please notify admin that you got this error.";
+  }
+  $stmt->close();
+  $mysqli->close();
+  setcookie("track", '', time(), "/");
   unset($_COOKIE["track"]);
-  setcookie("track", '', time() - 3600);
-  unset($_SESSION["user"]);
-  unset($_SESSION["rank"]);
   session_unset(); 
   session_destroy(); 
-  session_write_close();
-  setcookie(session_id(), "", time() - 3600);
-  header("Cache-Control: no-cache, must-revalidate");
 }
 
 
@@ -223,8 +227,8 @@ function login() {
           die("Execute failed: Get admin for help.");
         }
         setcookie("track", $cookie_string, time() + (86400 * 30*7*2), "/");
-      } else echo "passwords do not match!";
-    } else echo "wrong number of rows";
+      } 
+    } 
     $res->close();
     $stmt->close();
     $mysqli->close();

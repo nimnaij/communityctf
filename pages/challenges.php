@@ -5,6 +5,7 @@ if (session_id() == '') {
 }
 $challenges = array();
 $categories = array();
+$user_scores = array();
 
 function gen_submission_form($chalid, $owner) { ?>
       <form class="sub-form" method="POST" action="?p=challenges" id="sub-<?php echo $chalid."-".$owner;?>">
@@ -38,7 +39,19 @@ if (!$stmt->execute()) {
 }
 $res = $stmt->get_result();
 while($row= $res->fetch_assoc()) {
-  $challenges[] = $row;
+  $challenges[$row['title'].":".$row['owner']] = $row;
+}
+$res->close();
+$stmt->close(); 
+
+$stmt = $mysqli->prepare("SELECT user,challenge,owner from user_scores where user = ?");
+$stmt->bind_param("s", $_SESSION["user"]);
+if (!$stmt->execute()) {
+  die("Execute failed: Get admin for help.");
+}
+$res = $stmt->get_result();
+while($row= $res->fetch_assoc()) {
+  $user_scores[$row['challenge'].":".$row['owner']] = $row;
 }
 $res->close();
 $stmt->close(); 
@@ -51,44 +64,39 @@ if(isset($_POST['sub-chal']) && isset($_POST['sub-owner']) && isset($_POST['sub-
     $r["msg"] .= "You cannot submit a flag for your own challenge.\n";
   } else if (preg_match(TITLE_PATTERN, $_POST["sub-chal"] || preg_match(USER_PATTERN, $_POST["sub-owner"]))){
     $r["msg"] .= "Stop tampering with parameters.\n";
+  } else if(!isset($challenges[$_POST["sub-chal"].":".$_POST["sub-owner"]])) {
+    $r["msg"] .= "Challenge does not exist.";
+  } else if(isset($user_scores[$_POST["sub-chal"].":".$_POST["sub-owner"]])) {
+    $r["msg"] .= "You've already scored on this challenge.";
   } else if (preg_match(FLAG_PATTERN, $_POST["sub-flag"])) {
     $r["msg"] .= "Invalid flag.";
+    log_activity($mysqli, "attempted on challenge ".$_POST['sub-chal'].":".$_POST['sub-owner']." with invalid flag", $_SESSION["user"]);
+  } else if(md5($_POST["sub-flag"]) != md5($challenges[$_POST["sub-chal"].":".$_POST["sub-owner"]]["flag"])) {
+    $r["msg"] .= "Incorrect flag.";
+    log_activity($mysqli, "attempted on challenge ".$_POST['sub-chal'].":".$_POST['sub-owner']." with flag '".$_POST["sub-flag"]."'", $_SESSION["user"]);
   } else {
-    $stmt = $mysqli->prepare("SELECT * from challenges WHERE owner = ? AND title = ? AND flag = ?");
-    $stmt->bind_param("sss", $_POST["sub-owner"], $_POST["sub-chal"], $_POST["sub-flag"]);
+    $this_chal = $challenges[$_POST["sub-chal"].":".$_POST["sub-owner"]];
+
+    $r["msg"] = "Your flag is correct!\n";
+    $r["results"] = 1;
+    
+    $stmt = $mysqli->prepare("UPDATE challenges set count = count +1 WHERE owner = ? AND title=? ");
+    $stmt->bind_param("ss", $_POST["sub-owner"], $_POST["sub-chal"]);
     if (!$stmt->execute()) {
       die("Execute failed: Get admin for help.");
     }
-    $res = $stmt->get_result();
-    if($res->num_rows == 1) {
-      $res->close();
-      $stmt->close();
-      //success, update DB that user has scored.
-      $r["msg"] = "Your flag is correct!\n";
-      $r["results"] = 1;
-
-      
-      $stmt = $mysqli->prepare("UPDATE challenges set count = count +1 WHERE owner = ? AND title=? ");
-      $stmt->bind_param("ss", $_POST["sub-owner"], $_POST["sub-chal"]);
-      if (!$stmt->execute()) {
-        die("Execute failed: Get admin for help.");
-      }
-      $stmt->close();
-      
-      $stmt = $mysqli->prepare("INSERT INTO user_scores(user,challenge,owner,timestamp,ip) VALUES (?,?,?,?,?)");
-      $date = date ("Y-m-d H:i:s", time());
-      $stmt->bind_param("sssss", $_SESSION["user"], $_POST["sub-chal"], $_POST["sub-owner"], $date, $_SERVER['REMOTE_ADDR']);
-      if (!$stmt->execute()) {
-        die("Execute failed: Get admin for help.");
-      }
-      log_activity($mysqli, "scored on challenge ".$_POST['sub-chal'].":".$_POST['sub-owner']." with flag '".$_POST["sub-flag"]."'", $_SESSION["user"]);
-    } else {
-      $res->close();
-      $stmt->close();
-      $r["msg"] = "Your flag is wrong.\n";
-      log_activity($mysqli, "attempted on challenge ".$_POST['sub-chal'].":".$_POST['sub-owner']." with flag ".$_POST["sub-flag"]."'", $_SESSION["user"]);
+    $stmt->close();
+    $this_chal["count"] = $this_chal["count"] + 1;
+    
+    $stmt = $mysqli->prepare("INSERT INTO user_scores(user,challenge,owner,timestamp,ip) VALUES (?,?,?,?,?)");
+    $date = date ("Y-m-d H:i:s", time());
+    $stmt->bind_param("sssss", $_SESSION["user"], $_POST["sub-chal"], $_POST["sub-owner"], $date, $_SERVER['REMOTE_ADDR']);
+    if (!$stmt->execute()) {
+      die("Execute failed: Get admin for help.");
     }
+    log_activity($mysqli, "scored on challenge ".$_POST['sub-chal'].":".$_POST['sub-owner']." with flag '".$_POST["sub-flag"]."'", $_SESSION["user"]);
   }
+
    
   if(isset($_POST['ajax'])) {
     echo json_encode($r);
@@ -100,6 +108,9 @@ if(isset($_POST['sub-chal']) && isset($_POST['sub-owner']) && isset($_POST['sub-
     $output .="<div class='error'>".newline_to_ul_list($r["msg"])."</div>";
   }
 }
+
+
+
 $mysqli->close();
 ?>
 <!DOCTYPE html>
@@ -111,12 +122,17 @@ $mysqli->close();
 <link href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
 <script type="text/javascript" src="js/jquery.js"></script>
 <script type="text/javascript">
-ANIMATION_TIME = 200;
-function updateSelectors() {
+ANIMATION_TIME = 100;
+function updateSelectors() { 
   $(".selector span").each(function() {
+    setVisible = 0;
     if($(".challenge div.class:contains('"+$(this).text()+"')").parent().parent().is(":visible")) {
+      setVisible = 1;
+    } 
+    if(setVisible) {
       $(this).removeClass("off").addClass("on");
-    } else {
+    }
+    else {
       $(this).removeClass("off").addClass("off");
     }
     if(!$(".challenge div.class:contains('"+$(this).text()+"')").length) {
@@ -132,7 +148,17 @@ function expandAll() {
 }
 function showAll() {
   $(".challenge").show(ANIMATION_TIME);
-  updateSelectors();
+  setTimeout('updateSelectors();',ANIMATION_TIME);
+}
+function showSolved() {
+  $(".challenge:not(:has(div.solved))").hide(ANIMATION_TIME); 
+  $(".challenge:has(div.solved)").show(ANIMATION_TIME);
+  setTimeout('updateSelectors();',ANIMATION_TIME*2); // bad fix, find better way.
+}
+function showUnsolved() {
+  $(".challenge:not(:has(div.solved))").show(ANIMATION_TIME); 
+  $(".challenge:has(div.solved)").hide(ANIMATION_TIME);
+  setTimeout('updateSelectors();',ANIMATION_TIME*2); // bad fix. find better way.
 }
 $(function() {
   updateSelectors();
@@ -169,11 +195,14 @@ if($output != "") {
 <?php foreach ($categories as $cat) { ?>
     <span><?php echo $cat; ?></span>
 <?php } ?><br /><br />
-    <a href="javascript:collapseAll();">Collapse All</a> <a href="javascript:expandAll();">Expand All</a> <a href="javascript:showAll();">Show All</a></div>
+    <a href="javascript:collapseAll();">Collapse All</a> . <a href="javascript:expandAll();">Expand All</a> . <a href="javascript:showAll();">Show All</a> . <a href="javascript:showSolved();">Show Solved</a> . <a href="javascript:showUnsolved();">Show Unsolved</a></div>
   <div class="challenges">
-<?php foreach ($challenges as $chal) { ?>
+<?php foreach ($challenges as $chal) { 
+  $solved = "";
+  if(isset($user_scores[$chal['title'].":".$chal['owner']])) $solved = " solved";
+?>
     <div class="challenge">
-      <div class="title"><?php echo $chal['title']; ?> | <?php echo $chal['owner']; ?> | <?php echo calc_score($chal['count']); ?> | Solved <?php echo $chal['count'];?> times<div class="class"><?php echo $chal['category']; ?></div></div>
+      <div class="title<?php echo $solved; ?>"><?php echo $chal['title']; ?> | <?php echo $chal['owner']; ?> | <?php echo calc_score($chal['count']); ?> | Solved <?php echo $chal['count'];?> times<div class="class"><?php echo $chal['category']; ?></div></div>
       <div class="details"><?php echo base64_decode($chal['hint']); ?>
       <br /><?php 
 if($chal['owner']!= $_SESSION['user']) {

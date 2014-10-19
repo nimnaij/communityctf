@@ -201,6 +201,7 @@ a:hover {
 }
 .scoreboard table tr td {
   border-top: 1px solid #333;
+  border-bottom:none;
   margin:0px;
   padding:5px;
 }
@@ -208,5 +209,26 @@ a:hover {
   border:none;
   font-weight:bold;
   font-size:1.2em;
+}
+
+#panel_tabs {
+  text-align:center;
+}
+#panel_tabs ul.panel_tabs {
+  list-style-type: none;
+  margin: 0px auto;
+  padding:5px 0px;
+}
+#panel_tabs ul.panel_tabs li {
+  display: inline;
+  height:20px;
+  margin:0px 15px;
+  font-size:1.1em;
+  background:#ddd;
+  padding:10px;
+}
+#panel_tabs ul.panel_tabs li a {
+  font-weight:bold;
+  color:#000;
 }
 

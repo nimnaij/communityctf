@@ -228,9 +228,10 @@ $res->close();
 $stmt->close();
 $mysqli->close();
 
-// TO DO: add debugger entries.
+// TO DO: add challenge dependencies support
 // TO DO: fix multiple categories bug
 // TO DO: add ajax support
+
 
 ?>
 <!DOCTYPE html>
@@ -246,6 +247,7 @@ $mysqli->close();
 </style>
 
 <script type="text/javascript" src="js/jquery.js"></script>
+<?php if($_SESSION["rank"]>0) { ?><script src="js/jquery-ui.min.js"></script><?php } ?>
 <script type="text/javascript" src="js/chosen.jquery.min.js"></script>
 <script type="text/javascript">
 function showEditor(id) {
@@ -257,7 +259,9 @@ function showEditor(id) {
 
 $(function() {
  $("#editor").children('.container').hide();
-  $(".chosen-select").chosen({max_selected_options:4});
+ $("html, body").animate({ scrollTop:0 }, 50);
+ $(".chosen-select").chosen({max_selected_options:4});
+<?php if($_SESSION["rank"]>0) { ?> $( "#panel_tabs" ).tabs(); <?php } ?>
 });
 </script>
 <?php include("head.php"); ?>
@@ -272,8 +276,39 @@ if($output != "") {
   echo $output;
 } 
 ?>
-
-  <div class="ucp">
+<?php if($_SESSION["rank"]>0) { ?>
+  <div id="panel_tabs">
+    <ul class="panel_tabs">
+      <li><a href="#ucp">User Panel</a></li>
+      <li><a href="#mcp">Moderator Panel</a></li>
+  <?php   if($_SESSION["rank"]>1) { ?>      <li><a href="#acp">Admin Panel</a></li> <?php } ?>
+    </ul>  
+  <?php   if($_SESSION["rank"]>1) { ?>
+  <div class="ucp" id="acp">
+    <div class="par">
+    <h2>Website Manager</h2>
+    </div>
+    <div class="par">
+    <h2>Challenge Manager</h2>
+    </div>
+    <div class="par">
+    <h2>User Manager</h2>
+    </div>
+    <div class="par">
+    <h2>Manage Categories</h2>
+    </div>
+  </div>
+  <?php   } ?>
+    <div class="ucp" id="mcp">
+      <div class="par">
+      <h2>Challenge Approval</h2>
+      </div>
+      <div class="par">
+      <h2>User Approval</h2>
+      </div>
+    </div>
+<?php } ?>
+  <div class="ucp" id="ucp">
     <div class="par">
     <h2>Personal Info</h2>
       <div class="container">
@@ -384,6 +419,7 @@ foreach ($categories as $cat) {
 ?>
     </div>
   </div>
+<?php if($_SESSION["rank"] >0) { echo "</div>"; } ?>
 </div>
 
 </body>
