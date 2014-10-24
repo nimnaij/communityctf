@@ -6,6 +6,9 @@ if (session_id() == '') {
 $output="";
 $user_challenges = array();
 $categories = array();
+$pending_users = array();
+$pending_chals = array();
+$challenge_status = array(-1 => "Disapproved.", 0 => "Waiting for moderator.", 1=> "Approved.");
 $mysqli = setup_database();
 
 
@@ -23,37 +26,77 @@ while($row= $res->fetch_assoc()) {
 $res->close();
 $stmt->close();
 
-if(isset($_POST['new-email']) && isset($_POST['new-password2']) && isset($_POST['new-password']) && isset($_POST['new-org'])) {
-  $r["results"] = 1;
-  $r["msg"] = "";
+if($_SESSION["rank"]>0) {
+  $moderate_chal_inputs = new checkInput(array("title","moderate-title","POST"),array("user","moderate-owner","POST"),array("flag","action","POST"));
+  if($moderate_chal_inputs->getStatus()) {
+    $r["results"] = 1;
+
+    if($_POST["action"]=="disapprove") {
+      $chal_approval = -1;
+      $r["msg"] = "Challenge denied.\n";
+    } else if($_POST["action"]=="approve") {
+      $r["msg"] = "Challenge approved.\n";
+      $chal_approval = 1;
+    } else {
+      $r["msg"] = "No. n000b.\n";
+      $chal_approval = 0;
+      $r["results"] = 0;
+    }
+    if($chal_approval!=0) {
+      $stmt = $mysqli->prepare("UPDATE challenges set approved=? WHERE owner = ? AND title=?");
+      $stmt->bind_param("iss", $chal_approval, $_POST["moderate-owner"], $_POST["moderate-title"]);
+      if (!$stmt->execute()) {
+        die("Execute failed: Get admin for help!");
+      }
+      $stmt->close();
+      log_activity($mysqli, "moderated challenge ".$_POST['moderate-title'].":".$_POST['moderate-owner']." to:".$chal_approval, $_SESSION["user"]);
+    }
+  } else if(($moderate_account_input = new checkInput(array("user","mod-user","POST"),
+      array("flag","action","POST"))) && 
+      !$moderate_account_input->paramsNotSet() {
+        
+      }
+} 
+
+
+if($_SESSION["rank"]==1) {
+
+  $stmt = $mysqli->prepare("select name, email, org from users where approved = 1");
+  if (!$stmt->execute()) {
+    die("Execute failed: Get admin for help.");
+  }
+  $res = $stmt->get_result();
+  while($row= $res->fetch_assoc()) {
+    $pending_users[] = $row;
+  }
+  $res->close();
+  $stmt->close();
+  
+  $stmt = $mysqli->prepare("select title, owner, hint, category, approved from challenges where approved = 0");
+  if (!$stmt->execute()) {
+    die("Execute failed: Get admin for help.");
+  }
+  $res = $stmt->get_result();
+  while($row= $res->fetch_assoc()) {
+    $pending_chals[] = $row;
+  } 
+} else if($_SESSION["rank"]==2) {
+
+}
+
+if(($update_account_input = new checkInput(array("email","new-email","POST"),
+      array("pass","new-password","POST"),
+      array("pass2","new-password2","POST"),
+      array("org","new-org","POST"))) && 
+      !$update_account_input->paramsNotSet()) {
+  $r["results"] = $update_account_input->getStatus();
+  $r["msg"] = $update_account_input->getErrors();
   //passwords must match
   if($_POST["new-password2"]!=$_POST["new-password2"]) {
     $r["results"] = 0;
     $r["msg"] .= "Fatfingered the password, try again.\n";
   }
   
-  //password must be >= PASS_LEN
-  if(!strlen($_POST["new-password"])>=PASS_LEN) {
-    $r["results"] = 0;
-    $r["msg"] .= "Password needs to be at least ".PASS_LEN." characters long.\n";
-  }
-  
-  //check for valid email. not a perfect function but it's good enough for me
-  if(!filter_var($_POST["new-email"], FILTER_VALIDATE_EMAIL)) {
-    $r["results"] = 0;
-    $r["msg"] .= "Invalid email.\n";
-  }
-  
-  //check organization length
-  if(strlen($_POST["new-org"])<3) {
-    $r["results"] = 0;
-    $r["msg"] .= "Please include what organization you are affiliated with.\n";
-  }
-  //check organization. Mostly just want to keep out HTML from this one. Prepared statements will take care of injections.
-  if(preg_match(ORG_PATTERN, $_POST["new-org"])) {
-    $r["results"] = 0;
-    $r["msg"] .= "What type of organization is that? Try again using less-weird characters.\n";
-  }
   if($r["results"] ==1) {
     $pass_hash = password_hash($_POST["new-password"], PASSWORD_BCRYPT);
     $stmt = $mysqli->prepare("UPDATE users set email=?, password=?, org=? WHERE name = ?");
@@ -65,36 +108,20 @@ if(isset($_POST['new-email']) && isset($_POST['new-password2']) && isset($_POST[
     $stmt->close();
     $r["msg"] = "Information updated!";
   } 
-} else if(isset($_POST['new-title']) && isset($_POST['new-category']) && isset($_POST['new-hint']) && isset($_POST['new-flag'])) {
-  $r["results"] = 1;
-  $r["msg"] = "";
-  if(strlen($_POST["new-title"])<3) {
-    $r["results"] = 0;
-    $r["msg"] .= "Please include a longer title.\n";
-  }
-  //check title
-  if(preg_match(TITLE_PATTERN, $_POST["new-title"])) {
-    $r["results"] = 0;
-    $r["msg"] .= "Please adjust your challenge title. The rules: /[^a-zA-Z0-9_\s\'\"]/ \n";
-  }
-  if(preg_match(CAT_PATTERN, $_POST["new-category"])) {
-    $r["results"] = 0;
-    $r["msg"] .= "Please use an approved category. \n";
-  } else {
-    foreach(explode(" ",$_POST["new-category"]) as $cat) {
-      if(!in_array($cat,$categories)) {
-        $r["results"] = 0;
-        $r["msg"] .= $cat." is not an approved category. \n";
-      }
+} else if(($newchal_input = new checkInput(array("title","new-title","POST"),
+      array("cat","new-category","POST"),
+      array("hint","new-hint","POST"),
+      array("flag","new-flag","POST"))) && 
+      !$newchal_input->paramsNotSet()) {
+
+  $r["results"] = $newchal_input->getStatus();
+  $r["msg"] = $newchal_input->getErrors();
+  
+  foreach(explode(" ",$_POST["new-category"]) as $cat) {
+    if(!in_array($cat,$categories)) {
+      $r["results"] = 0;
+      $r["msg"] .= $cat." is not an approved category. \n";
     }
-  }
-  if(preg_match(FLAG_PATTERN, $_POST["new-flag"]) || strlen($_POST["new-flag"])<8) {
-    $r["results"] = 0;
-    $r["msg"] .= "Flags must be alphanumeric and greater than 8 characters \n";
-  }
-  if(strlen($_POST["new-hint"])>1125) {
-    $r["results"] = 0;
-    $r["msg"] .= "Your hint is too long. Limit is 1125 characters. \n";
   }
   if($r["results"] ==1) {
     $stmt = $mysqli->prepare("INSERT INTO challenges(title,owner,category,flag,hint) VALUES (?,?,?,?,?)");
@@ -107,40 +134,23 @@ if(isset($_POST['new-email']) && isset($_POST['new-password2']) && isset($_POST[
     log_activity($mysqli, "added challenge ".$_POST['new-title'], $_SESSION["user"]);
     $r["msg"] = "You challenge has been added.";
   } 
-} else if(isset($_POST['edit-title']) && isset($_POST['edit-category']) && isset($_POST['edit-hint']) && isset($_POST['edit-flag']) && isset($_POST["edit-prev-title"])) {
-echo $_POST['edit-category'];
-  $r["results"] = 1;
-  $r["msg"] = "";
-  if(strlen($_POST["edit-title"])<3 || strlen($_POST["edit-prev-title"])<3) {
-    $r["results"] = 0;
-    $r["msg"] .= "Please include a longer title.\n";
-  }
-  //check title
-  if(preg_match(TITLE_PATTERN, $_POST["edit-title"]) || preg_match(TITLE_PATTERN, $_POST["edit-prev-title"])) {
-    $r["results"] = 0;
-    $r["msg"] .= "Please adjust your challenge title. The rules: ".TITLE_PATTERN."\n";
-  }
-  if(preg_match(CAT_PATTERN, $_POST["edit-category"])) {
-    $r["results"] = 0;
-    $r["msg"] .= "Please use an approved category. \n";
-  } else {
-    foreach(explode(" ",$_POST["edit-category"]) as $cat) {
-      if(!in_array($cat,$categories)) {
-        $r["results"] = 0;
-        $r["msg"] .= $cat." is not an approved category. \n";
-      }
+} else if(($editchal_input = new checkInput(array("title","edit-title","POST"),
+      array("title","edit-prev-title","POST"),
+      array("cat","edit-category","POST"),
+      array("hint","edit-hint","POST"),
+      array("flag","edit-flag","POST"))) && 
+      !$editchal_input->paramsNotSet()) {
+  $r["results"] = $editchal_input->getStatus();
+  $r["msg"] = $editchal_input->getErrors();
+  
+  foreach(explode(" ",$_POST["edit-category"]) as $cat) {
+    if(!in_array($cat,$categories)) {
+      $r["results"] = 0;
+      $r["msg"] .= $cat." is not an approved category. \n";
     }
   }
-  if(preg_match(FLAG_PATTERN, $_POST["edit-flag"]) || strlen($_POST["edit-flag"])<8) {
-    $r["results"] = 0;
-    $r["msg"] .= "Flags must be alphanumeric and greater than 10 characters \n";
-  }
-  if(strlen($_POST["edit-hint"])>1125) {
-    $r["results"] = 0;
-    $r["msg"] .= "Your hint is too long. Limit is 1125 characters. \n";
-  }
   if($r["results"] ==1) { 
-    $stmt = $mysqli->prepare("UPDATE challenges set title=?, category=?, flag=?, hint=? WHERE owner = ? AND title=?");
+    $stmt = $mysqli->prepare("UPDATE challenges set title=?, category=?, flag=?, hint=?, approved=0 WHERE owner = ? AND title=?");
     $hint = base64_encode($_POST["edit-hint"]);
     $stmt->bind_param("ssssss", $_POST["edit-title"], $_POST["edit-category"], $_POST["edit-flag"], $hint, $_SESSION["user"], $_POST["edit-prev-title"]);
     if (!$stmt->execute()) {
@@ -150,11 +160,9 @@ echo $_POST['edit-category'];
     log_activity($mysqli, "updated challenge ".$_POST['edit-prev-title'].":".$_POST['edit-title'], $_SESSION["user"]);
     $r["msg"] = "Your challenge has been updated.";
   } 
-} else if(isset($_POST['del-title'])) {
-  if(preg_match(TITLE_PATTERN, $_POST["del-title"])) {
-    $r["results"] = 0;
-    $r["msg"] .= "Flags must be alphanumeric and greater than 10 characters \n";
-  } else {
+} else if(($del_input = new checkInput(array("title","del-title","POST"))) && $del_input->getStatus()) {
+    $r["results"] = $del_input->getStatus();
+    $r["msg"] .= $del_input->getErrors();
     //check to see if user actually owns the challenge and is authorized to delete it. 
     $stmt = $mysqli->prepare("SELECT * from challenges where title = ? and owner = ?");
     $stmt->bind_param("ss", $_POST["del-title"], $_SESSION["user"]);
@@ -184,8 +192,7 @@ echo $_POST['edit-category'];
       $r["msg"] = "Your challenge was successfully deleted.";
       log_activity($mysqli, "deleted challenge ".$_POST['del-title'], $_SESSION["user"]);
     }
-    $stmt->close();
-  }
+  $stmt->close();
 }
 if(isset($r)) {
   if(isset($_POST['ajax'])) {
@@ -194,7 +201,7 @@ if(isset($r)) {
   }
   if($r["results"] == 1 && $r["msg"]!="") {
     $output .="<div class='success'>".$r["msg"]."</div>";
-  } else {
+  } else if($r["msg"]!="") {
     $output .="<div class='error'>".newline_to_ul_list($r["msg"])."</div>";
   }
 }
@@ -302,9 +309,57 @@ if($output != "") {
     <div class="ucp" id="mcp">
       <div class="par">
       <h2>Challenge Approval</h2>
+        <div class="container">
+        <?php if(sizeof($pending_chals)==0) {
+          echo "No challenges to approve.";
+        } else {
+        $count = 0;
+        foreach ($pending_chals as $chal) { ?>
+        <div class="container" id="moderate-<?php echo $chal['title']; ?>">
+
+          <div class="item">
+            Challenge Title:
+            <span><?php echo $chal['title']; ?></span>
+          </div>
+          <div class="item">
+            Category:
+            <span><?php echo $chal['category']; ?></span>
+          </div>
+          <div class="item">
+            Hint:
+            <span class="html-source"><?php echo htmlentities(base64_decode($chal['hint'])); ?></span>
+          </div>
+          <form action="?p=panel#mcp" method="POST" id="moderate-<?php echo "app-".$count; ?>">
+          <input type="hidden" name="moderate-title" value="<?php echo $chal['title']; ?>">
+          <input type="hidden" name="moderate-owner" value="<?php echo $chal['owner']; ?>">
+          <input type="hidden" name="action" value="approve">
+          <button form="moderate-<?php echo "app-".$count ?>" type="submit">Approve</button>
+        </form>
+        <form action="?p=panel#mcp" method="POST" id="moderate-<?php echo "den-".$count; ?>">
+          <input type="hidden" name="moderate-title" value="<?php echo $chal['title']; ?>">
+          <input type="hidden" name="moderate-owner" value="<?php echo $chal['owner']; ?>">
+          <input type="hidden" name="action" value="disapprove">
+          <button form="moderate-<?php echo "den-".$count ?>" type="submit">Disapprove</button>
+        </form>
+        <br />
+      </div>
+        <?php
+        $count++;
+  }
+
+        } ?>
+        </div>
       </div>
       <div class="par">
       <h2>User Approval</h2>
+        <div class="container">
+        <?php if(sizeof($pending_users)==0) {
+          echo "No users to approve.";
+        } else {
+          print_r($pending_users);
+        } ?>
+        </div>
+
       </div>
     </div>
 <?php } ?>
@@ -367,7 +422,7 @@ foreach ($categories as $cat) {
       <h2>Update Challenge</h2>
         <select onchange="showEditor(value);">
           <option value=" "> </option>
-<?php
+<?php // TODO: make this more efficient. only loop once, not every time.
   foreach ($user_challenges as $chal) {
 $chal_cat = explode(" ", $chal["category"]);
   ?>
@@ -403,7 +458,11 @@ foreach ($categories as $cat) {
           <div class="item">
             <label for="edit-hint">Hint:</label>
             <textarea name="edit-hint" maxlength="1125"><?php echo base64_decode($chal['hint']); ?></textarea>
-          </div>      
+          </div>
+          <div class="item">
+            <strong>Status: </strong>
+            <?php echo $challenge_status[$chal['approved']]; ?>
+          </div>
           <input type="hidden" name="edit-prev-title" value="<?php echo $chal['title']; ?>">
           <button form="edit-<?php echo $count ?>" type="submit">Update</button>
         </form>

@@ -16,14 +16,15 @@ define("COOKIE", True);
 define("BASE_SCORE", 1000);
 // inclusions
 require_once("inc/functions.php");
-
+require_once("inc/validation.php");
 
 //functions
-
 function check_cookie($cookie) {
   if(!COOKIE) return false;
   if(isset($_COOKIE["track"]) && !isset($_SESSION["user"]) && !isset($_SESSION["rank"])) {
-    if(strlen($_COOKIE["track"])!=64 || preg_match('/[^a-z0-9]/', $_COOKIE["track"])) return false;
+  //  if(strlen($_COOKIE["track"])!=64 || preg_match('/[^a-z0-9]/', $_COOKIE["track"])) return false;
+  $cookie_status = new checkInput(array("track","track","COOKIE"));
+    if($cookie_status->paramsNotSet()) return false;
   
     $mysqli = setup_database();
     
@@ -72,55 +73,19 @@ function logout() {
 
 
 function check_reg() {
-  if(isset($_POST["user"]) && isset($_POST["pass"]) && isset($_POST["pass2"]) && isset($_POST["email"]) && isset($_POST["org"])) {
-    $r["results"] = 1;
-    $r["msg"] = "";
-    
-    //check username length
-    if(!strlen($_POST["user"])>0) {
-      $r["results"] = 0;
-      $r["msg"] .= "Username must be at least 1 character long.\n";
-    }
-    
-    //check username for alphanumeric only
-    if(preg_match(USER_PATTERN, $_POST["user"])) {
-      $r["results"] = 0;
-      $r["msg"] .= "This is America, only alphanumeric and underscores allowed.\n";
-    }
+  if($reg_inputs = new checkInput(array("user","user","POST"),array("pass","pass","POST"),array("pass2","pass2","POST"),array("email","email","POST"),array("org","org","POST"))) {
+    $r["results"] = $reg_inputs->getStatus();
+    $r["msg"] = $reg_inputs->getErrors();
     
     //passwords must match
-    if($_POST["pass"]!=$_POST["pass2"]) {
-      $r["results"] = 0;
-      $r["msg"] .= "Fatfingered the password, try again.\n";
+    if($reg_inputs->getStatus()) {
+      if($_POST["pass"]!=$_POST["pass2"]) {
+        $r["results"] = 0;
+        $r["msg"] .= "Passwords do not match, try again.\n";
+      }
     }
-    
-    //password must be >= PASS_LEN
-    if(!strlen($_POST["pass"])>=PASS_LEN) {
-      $r["results"] = 0;
-      $r["msg"] .= "Password needs to be at least ".PASS_LEN." characters long.\n";
-    }
-    
-    //check for valid email. not a perfect function but it's good enough for me
-    if(!filter_var($_POST["email"], FILTER_VALIDATE_EMAIL)) {
-      $r["results"] = 0;
-      $r["msg"] .= "Invalid email.\n";
-    }
-    
-    //check organization length
-    if(strlen($_POST["org"])<3) {
-      $r["results"] = 0;
-      $r["msg"] .= "Please include what organization you are affiliated with.\n";
-    }
-    //check organization. Mostly just want to keep out HTML from this one. Prepared statements will take care of injections.
-    if(preg_match(ORG_PATTERN, $_POST["org"])) {
-      $r["results"] = 0;
-      $r["msg"] .= "What type of organization is that? Try again using less-weird characters.\n";
-    }
-    
   } else {
-    if(!(isset($_POST["user"]) || isset($_POST["pass"]) && isset($_POST["pass2"]) || isset($_POST["email"]) || isset($_POST["org"]))) {
-      $r = array('results' => -1, 'msg' => "");
-    } else $r = array('results' => 0, 'msg' => "All fields are required.");
+    $r = array('results' => 0, 'msg' => $reg_inputs->getErrors());
   }
     return $r;
 }
@@ -156,7 +121,7 @@ function registration() {
     if($r["results"]) {
       $pass = password_hash($_POST["pass"], PASSWORD_BCRYPT);
       $date = date ("Y-m-d H:i:s", time());
-      $stmt = $mysqli->prepare("INSERT INTO users(name,password,email,org,timestamp) VALUES (?,?,?,?,?)");
+      $stmt = $mysqli->prepare("INSERT INTO users(name,password,email,org,timestamp,approved) VALUES (?,?,?,?,?,1)");
       $stmt->bind_param("sssss", $_POST["user"], $pass, $_POST["email"], $_POST["org"], $date);
       if (!$stmt->execute()) {
         die("Execute failed: Get admin for help!");
@@ -182,10 +147,11 @@ function registration() {
 }
 
 
-//TO DO: implement long term session cookie
+
 function login() {
   global $output;
-  if(!isset($_POST["user"]) && !isset($_POST["pass"])) {
+  $login_inputs = new checkInput(array("user","user","POST"),array("pass","pass","POST"));
+  if($login_inputs->paramsNotSet()) {
     $output .= generate_login_form();
     return;
   }
@@ -193,7 +159,7 @@ function login() {
   $r["msg"] = "Incorrect Login.\n";
   //check username for alphanumeric only
 
-  if(!preg_match(USER_PATTERN, $_POST["user"])) {  
+  if($login_inputs->getStatus()) {  
     $mysqli = setup_database();
 
     $pass = password_hash($_POST["pass"], PASSWORD_BCRYPT);
@@ -235,8 +201,7 @@ function login() {
   }
   
   if(isset($_POST["ajax"])) {
-    echo json_encode($r);
-    die();
+    die(json_encode($r));
   }
   
   if($r["results"]==1) {

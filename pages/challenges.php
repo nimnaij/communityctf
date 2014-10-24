@@ -12,7 +12,7 @@ function gen_submission_form($chalid, $owner) { ?>
         <input type="hidden" name="sub-chal" value="<?php echo $chalid; ?>">
         <input type="hidden" name="sub-owner" value="<?php echo $owner;?>">
         <input type="textbox" value="" name="sub-flag">
-        <input type="submit" value="Submit">
+        <input type="submit" value="bits?">
       </form><?php
 }
 
@@ -33,7 +33,7 @@ $res->close();
 $stmt->close(); 
 
 
-$stmt = $mysqli->prepare("SELECT * from challenges");
+$stmt = $mysqli->prepare("SELECT * from challenges where approved = 1");
 if (!$stmt->execute()) {
   die("Execute failed: Get admin for help.");
 }
@@ -59,18 +59,17 @@ $stmt->close();
 
   $r["results"] = 0;
   $r["msg"] = "";
-if(isset($_POST['sub-chal']) && isset($_POST['sub-owner']) && isset($_POST['sub-flag'])) {
-  if($_POST["sub-owner"]==$_SESSION["user"]) {
+  
+$sub_inputs = new checkInput(array("title","sub-chal","POST"),array("user","sub-owner","POST"),array("flag","sub-flag","POST"));
+if(!$sub_inputs->paramsNotSet()) {
+  if(!$sub_inputs->getStatus()) {
+    $r["msg"] = $sub_inputs->getErrors();
+  } else if($_POST["sub-owner"]==$_SESSION["user"]) {
     $r["msg"] .= "You cannot submit a flag for your own challenge.\n";
-  } else if (preg_match(TITLE_PATTERN, $_POST["sub-chal"] || preg_match(USER_PATTERN, $_POST["sub-owner"]))){
-    $r["msg"] .= "Stop tampering with parameters.\n";
   } else if(!isset($challenges[$_POST["sub-chal"].":".$_POST["sub-owner"]])) {
     $r["msg"] .= "Challenge does not exist.";
   } else if(isset($user_scores[$_POST["sub-chal"].":".$_POST["sub-owner"]])) {
     $r["msg"] .= "You've already scored on this challenge.";
-  } else if (preg_match(FLAG_PATTERN, $_POST["sub-flag"])) {
-    $r["msg"] .= "Invalid flag.";
-    log_activity($mysqli, "attempted on challenge ".$_POST['sub-chal'].":".$_POST['sub-owner']." with invalid flag", $_SESSION["user"]);
   } else if(md5($_POST["sub-flag"]) != md5($challenges[$_POST["sub-chal"].":".$_POST["sub-owner"]]["flag"])) {
     $r["msg"] .= "Incorrect flag.";
     log_activity($mysqli, "attempted on challenge ".$_POST['sub-chal'].":".$_POST['sub-owner']." with flag '".$_POST["sub-flag"]."'", $_SESSION["user"]);
@@ -79,6 +78,8 @@ if(isset($_POST['sub-chal']) && isset($_POST['sub-owner']) && isset($_POST['sub-
 
     $r["msg"] = "Your flag is correct!\n";
     $r["results"] = 1;
+    $challenges[$_POST["sub-chal"].":".$_POST["sub-owner"]]["count"] += 1;
+    $user_scores[$_POST["sub-chal"].":".$_POST["sub-owner"]] = "solved";
     
     $stmt = $mysqli->prepare("UPDATE challenges set count = count +1 WHERE owner = ? AND title=? ");
     $stmt->bind_param("ss", $_POST["sub-owner"], $_POST["sub-chal"]);
@@ -205,7 +206,7 @@ if($output != "") {
       <div class="title<?php echo $solved; ?>"><?php echo $chal['title']; ?> | <?php echo $chal['owner']; ?> | <?php echo calc_score($chal['count']); ?> | Solved <?php echo $chal['count'];?> times<div class="class"><?php echo $chal['category']; ?></div></div>
       <div class="details"><?php echo base64_decode($chal['hint']); ?>
       <br /><?php 
-if($chal['owner']!= $_SESSION['user']) {
+if($chal['owner']!= $_SESSION['user'] && $solved=="") {
   gen_submission_form($chal['title'], $chal['owner']);
   }
   ?>

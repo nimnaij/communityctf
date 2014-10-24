@@ -172,10 +172,10 @@ a:hover {
   color: #000;
 }
 .error {
-  margin:0px auto;
+  margin:10px auto;
   width:500px;
   border: 1px dashed #CC8080;
-  padding: 15px;
+  padding: 10px;
 }
 .success {
   margin:0px auto;
@@ -213,6 +213,7 @@ a:hover {
 
 #panel_tabs {
   text-align:center;
+  margin:0px 15px;
 }
 #panel_tabs ul.panel_tabs {
   list-style-type: none;
