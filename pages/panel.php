@@ -6,12 +6,15 @@ if (session_id() == '') {
 $output="";
 $user_challenges = array();
 $categories = array();
+$all_chals = array();
+$all_users = array();
 $pending_users = array();
 $pending_chals = array();
 $challenge_status = array(-1 => "Disapproved.", 0 => "Waiting for moderator.", 1=> "Approved.");
+$ranks = array(0 => "User", 1 => "Moderator", 2=> "Admin");
 $mysqli = setup_database();
 
-
+print_r($_POST);
 
 
 $stmt = $mysqli->prepare("SELECT * from categories");
@@ -53,9 +56,29 @@ if($_SESSION["rank"]>0) {
     }
   } else if(($moderate_account_input = new checkInput(array("user","mod-user","POST"),
       array("flag","action","POST"))) && 
-      !$moderate_account_input->paramsNotSet() {
-        
+      !$moderate_account_input->paramsNotSet()) {
+    $r["results"] = 1;
+    if($_POST["action"]=="disapprove") {
+      $user_approval = -1;
+      $r["msg"] = "User disapproved.\n";
+    } else if($_POST["action"]=="approve") {
+      $user_approval = 2;
+      $r["msg"] = "User approved.\n";
+    } else {
+      $r["results"] = 0;
+      $r["msg"] = "N00b. lrn2haxmoarplz\n";
+      $user_approval = 0;
+    }
+    if($user_approval!=0) {
+      $stmt = $mysqli->prepare("UPDATE users set approved=? WHERE name=?");
+      $stmt->bind_param("is", $user_approval, $_POST["mod-user"]);
+      if (!$stmt->execute()) {
+        die("Execute failed: Get admin for help!");
       }
+      $stmt->close();
+      log_activity($mysqli, "moderated user ".$_POST['mod-user']." to:".$user_approval, $_SESSION["user"]);
+    }
+  }
 } 
 
 
@@ -80,7 +103,29 @@ if($_SESSION["rank"]==1) {
   while($row= $res->fetch_assoc()) {
     $pending_chals[] = $row;
   } 
+  
 } else if($_SESSION["rank"]==2) {
+  $stmt = $mysqli->prepare("select name, email, org, rank, approved from users");
+  if (!$stmt->execute()) {
+    die("Execute failed: Get admin for help.");
+  }
+  $res = $stmt->get_result();
+  while($row= $res->fetch_assoc()) {
+    $all_users[] = $row;
+    if($row["approved"] == 1) $pending_users[] = $row;
+  }
+  $res->close();
+  $stmt->close();
+  
+  $stmt = $mysqli->prepare("select title, owner, hint, category, approved from challenges where approved = 0");
+  if (!$stmt->execute()) {
+    die("Execute failed: Get admin for help.");
+  }
+  $res = $stmt->get_result();
+  while($row= $res->fetch_assoc()) {
+    $all_chals[] = $row;
+    if($row["approved"] == 0) $pending_chals[] = $row;
+  } 
 
 }
 
@@ -300,6 +345,22 @@ if($output != "") {
     </div>
     <div class="par">
     <h2>User Manager</h2>
+    <table><tr><td>Name</td><td>Email</td><td>Organization</td><td>Approval</td></tr><?php
+    foreach ($all_users as $user) { ?>
+    <tr><td><?php echo $user["name"];?></td><td><?php echo $user["email"];?></td><td><?php echo $user["org"];?></td><td>
+      <form action="?p=panel#mcp" method="POST" id="adm-user-rank-<?php echo $user["name"]; ?>">
+        <select name="adm-user-rank">
+          <option value="2"><?php echo $ranks[2];?></option>
+          <option value="1"><?php echo $ranks[1];?></option>
+          <option value="0"><?php echo $ranks[0];?></option>
+          <option selected="selected" value="<?php echo $user["rank"];?>"><?php echo $ranks[$user["rank"]];?></option>
+        </select>
+        <input type="hidden" name="adm-user" value="<?php echo $user["name"]; ?>">
+        <input type="submit" value="update">
+      </form> 
+    </td></tr>
+    <?php } ?>
+    </table>
     </div>
     <div class="par">
     <h2>Manage Categories</h2>
@@ -353,13 +414,26 @@ if($output != "") {
       <div class="par">
       <h2>User Approval</h2>
         <div class="container">
-        <?php if(sizeof($pending_users)==0) {
-          echo "No users to approve.";
-        } else {
-          print_r($pending_users);
-        } ?>
+          <?php if(sizeof($pending_users)==0) {
+            echo "No users to approve.";
+          } else { ?>
+          <table><tr><td>Name</td><td>Email</td><td>Organization</td><td>Approval</td></tr><?php
+          foreach ($pending_users as $user) { ?>
+          <tr><td><?php echo $user["name"];?></td><td><?php echo $user["email"];?></td><td><?php echo $user["org"];?></td><td>
+            <form action="?p=panel#mcp" method="POST" id="mod-<?php echo "app-".$user["name"]; ?>">
+              <input type="hidden" name="mod-user" value="<?php echo $user["name"]; ?>">
+              <input type="hidden" name="action" value="approve">
+            </form> 
+            <form action="?p=panel#mcp" method="POST" id="mod-<?php echo "den-".$user["name"]; ?>">
+              <input type="hidden" name="mod-user" value="<?php echo $user["name"]; ?>">
+              <input type="hidden" name="action" value="disapprove">
+            </form>
+            <button form="mod-app-<?php echo $user["name"]; ?>">&#x2714;</button> <button form="mod-den-<?php echo $user["name"]; ?>">X</button>
+          </td></tr>
+          <?php } ?>
+          </table>
+        <?php } ?>
         </div>
-
       </div>
     </div>
 <?php } ?>
