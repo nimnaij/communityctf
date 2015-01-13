@@ -14,7 +14,6 @@ $challenge_status = array(-1 => "Disapproved.", 0 => "Waiting for moderator.", 1
 $ranks = array(0 => "User", 1 => "Moderator", 2=> "Admin");
 $mysqli = setup_database();
 
-print_r($_POST);
 
 
 $stmt = $mysqli->prepare("SELECT * from categories");
@@ -29,6 +28,10 @@ while($row= $res->fetch_assoc()) {
 $res->close();
 $stmt->close();
 
+/*
+ * MCP
+ *
+ */
 if($_SESSION["rank"]>0) {
   $moderate_chal_inputs = new checkInput(array("title","moderate-title","POST"),array("user","moderate-owner","POST"),array("flag","action","POST"));
   if($moderate_chal_inputs->getStatus()) {
@@ -78,9 +81,44 @@ if($_SESSION["rank"]>0) {
       $stmt->close();
       log_activity($mysqli, "moderated user ".$_POST['mod-user']." to:".$user_approval, $_SESSION["user"]);
     }
-  }
+  } else if(($adm_chal_input = new checkInput(array("title","adm-chal-title","POST"),
+      array("title","adm-chal-prev-title","POST"),
+      array("user","adm-chal-owner","POST"),
+      array("user","adm-chal-prev-owner","POST"),
+      array("cat","adm-chal-category","POST"),
+      array("flag","adm-chal-flag","POST"),
+      array("hint","adm-chal-hint","POST"))) && 
+      !$adm_chal_input->paramsNotSet() &&
+      $_SESSION["rank"]>1) {
+        $r["results"] = $adm_chal_input->getStatus();
+        $r["msg"] = $adm_chal_input->getErrors();
+        
+        foreach(explode(" ",$_POST["adm-chal-category"]) as $cat) {
+          if(!in_array($cat,$categories)) {
+            $r["results"] = 0;
+            $r["msg"] .= $cat." is not an approved category. \n";
+          }
+        }
+        if($r["results"] ==1) { 
+          $stmt = $mysqli->prepare("UPDATE challenges set title=?, category=?, flag=?, hint=?, approved=1, owner=?, title=? WHERE owner = ? AND title=?");
+          $hint = base64_encode($_POST["adm-chal-hint"]);
+          $stmt->bind_param("ssssssss", $_POST["adm-chal-title"], $_POST["adm-chal-category"], $_POST["adm-chal-flag"], $hint, $_POST["adm-chal-owner"], $_POST["adm-chal-title"], $_POST["adm-chal-prev-owner"], $_POST["adm-chal-prev-title"]);
+          if (!$stmt->execute()) {
+            die("Execute failed: Get admin for help!");
+          }
+          $stmt->close();
+          log_activity($mysqli, "administratively updated challenge ".$_POST['adm-chal-prev-title'].":".$_POST['adm-chal-title'].", owner ".$_POST['adm-chal-prev-owner'].":".$_POST['adm-chal-owner'], $_SESSION["user"]);
+          $r["msg"] = "Your challenge has been updated.";
+        }  
+
+  
+  } 
 } 
 
+/*
+ * 
+ *
+ */
 
 if($_SESSION["rank"]==1) {
 
@@ -117,7 +155,7 @@ if($_SESSION["rank"]==1) {
   $res->close();
   $stmt->close();
   
-  $stmt = $mysqli->prepare("select title, owner, hint, category, approved from challenges where approved = 0");
+  $stmt = $mysqli->prepare("select title, owner, hint, category, approved, flag from challenges");
   if (!$stmt->execute()) {
     die("Execute failed: Get admin for help.");
   }
@@ -128,6 +166,9 @@ if($_SESSION["rank"]==1) {
   } 
 
 }
+
+
+
 
 if(($update_account_input = new checkInput(array("email","new-email","POST"),
       array("pass","new-password","POST"),
@@ -284,7 +325,7 @@ $mysqli->close();
 // TO DO: fix multiple categories bug
 // TO DO: add ajax support
 
-
+print_r($_POST);
 ?>
 <!DOCTYPE html>
 <html>
@@ -341,14 +382,39 @@ if($output != "") {
     <h2>Website Manager</h2>
     </div>
     <div class="par">
-    <h2>Challenge Manager</h2>
+    <h2>Challenge Manager</h2> 
+    <table>
+      <tr>
+        <td>Title</td>
+        <td>Owner</td>
+        <td>Category</td>
+        <td>Flag</td>
+        <td>Hint</td>
+        <td>Approval</td>
+        <td></td>
+      </tr><?php //title, owner, hint, category, approved, flag
+    foreach ($all_chals as $chal) { ?>
+    <tr>
+      <form action="?panel#acp" method="POST" id="<?php echo md5($chal['title'].$chal['owner']."all"); ?>">
+      <td><input type="text" name="adm-chal-title" value="<?php echo $chal["title"];?>"></td>
+      <td><input type="text" name="adm-chal-owner" value="<?php echo $chal["owner"]; ?>"></td>
+      <td><input type="text" name="adm-chal-category" value="<?php echo $chal["category"]; ?>"></td>
+      <td><input type="text" name="adm-chal-flag" value="<?php echo $chal["flag"]; ?>"></td>
+      <td><textarea name="adm-chal-hint"><?php echo base64_decode($chal["hint"]); ?></textarea></td>
+      <input type="hidden" name="adm-chal-prev-title" value="<?php echo $chal["title"];?>">
+      <input type="hidden" name="adm-chal-prev-owner" value="<?php echo $chal["owner"];?>">
+      <td><?php echo $chal["approved"]; ?></td>
+      <td><button type="submit" form="<?php echo md5($chal['title'].$chal['owner']."all"); ?>">Update</button></form><button>X</button></td>
+      
+    </tr><?php } ?>
+    </table>
     </div>
     <div class="par">
     <h2>User Manager</h2>
     <table><tr><td>Name</td><td>Email</td><td>Organization</td><td>Approval</td></tr><?php
     foreach ($all_users as $user) { ?>
     <tr><td><?php echo $user["name"];?></td><td><?php echo $user["email"];?></td><td><?php echo $user["org"];?></td><td>
-      <form action="?p=panel#mcp" method="POST" id="adm-user-rank-<?php echo $user["name"]; ?>">
+      <form action="?panel#acp" method="POST" id="adm-user-rank-<?php echo $user["name"]; ?>">
         <select name="adm-user-rank">
           <option value="2"><?php echo $ranks[2];?></option>
           <option value="1"><?php echo $ranks[1];?></option>
@@ -390,13 +456,13 @@ if($output != "") {
             Hint:
             <span class="html-source"><?php echo htmlentities(base64_decode($chal['hint'])); ?></span>
           </div>
-          <form action="?p=panel#mcp" method="POST" id="moderate-<?php echo "app-".$count; ?>">
+          <form action="?panel#mcp" method="POST" id="moderate-<?php echo "app-".$count; ?>">
           <input type="hidden" name="moderate-title" value="<?php echo $chal['title']; ?>">
           <input type="hidden" name="moderate-owner" value="<?php echo $chal['owner']; ?>">
           <input type="hidden" name="action" value="approve">
           <button form="moderate-<?php echo "app-".$count ?>" type="submit">Approve</button>
         </form>
-        <form action="?p=panel#mcp" method="POST" id="moderate-<?php echo "den-".$count; ?>">
+        <form action="?panel#mcp" method="POST" id="moderate-<?php echo "den-".$count; ?>">
           <input type="hidden" name="moderate-title" value="<?php echo $chal['title']; ?>">
           <input type="hidden" name="moderate-owner" value="<?php echo $chal['owner']; ?>">
           <input type="hidden" name="action" value="disapprove">
@@ -420,11 +486,11 @@ if($output != "") {
           <table><tr><td>Name</td><td>Email</td><td>Organization</td><td>Approval</td></tr><?php
           foreach ($pending_users as $user) { ?>
           <tr><td><?php echo $user["name"];?></td><td><?php echo $user["email"];?></td><td><?php echo $user["org"];?></td><td>
-            <form action="?p=panel#mcp" method="POST" id="mod-<?php echo "app-".$user["name"]; ?>">
+            <form action="?panel#mcp" method="POST" id="mod-<?php echo "app-".$user["name"]; ?>">
               <input type="hidden" name="mod-user" value="<?php echo $user["name"]; ?>">
               <input type="hidden" name="action" value="approve">
             </form> 
-            <form action="?p=panel#mcp" method="POST" id="mod-<?php echo "den-".$user["name"]; ?>">
+            <form action="?panel#mcp" method="POST" id="mod-<?php echo "den-".$user["name"]; ?>">
               <input type="hidden" name="mod-user" value="<?php echo $user["name"]; ?>">
               <input type="hidden" name="action" value="disapprove">
             </form>
@@ -441,7 +507,7 @@ if($output != "") {
     <div class="par">
     <h2>Personal Info</h2>
       <div class="container">
-        <form action="?p=panel" id="pers-info" method="POST">
+        <form action="?panel" id="pers-info" method="POST">
           <div class="item">
             <label for="new-email">Email:</label>
             <input type="email" name="new-email" value="<?php echo $user_info["email"];?>">
@@ -466,7 +532,7 @@ if($output != "") {
     <div class="par">
       <h2>Add New Challenge</h2>
       <div class="container">
-        <form action="?p=panel" id="new-chal" method="POST">
+        <form action="?panel" id="new-chal" method="POST">
           <div class="item">
             <label for="new-title">Challenge Title:</label>
             <input type="text" name="new-title">
@@ -509,7 +575,7 @@ $chal_cat = explode(" ", $chal["category"]);
 $count = 0;
   foreach ($user_challenges as $chal) { ?>
         <div class="container" id="edit-<?php echo $chal['title']; ?>">
-        <form action="?p=panel" method="POST" id="edit-<?php echo $count; ?>">
+        <form action="?panel" method="POST" id="edit-<?php echo $count; ?>">
           <div class="item">
             <label for="edit-title">Challenge Title:</label>
             <input type="text" name="edit-title" value="<?php echo $chal['title']; ?>">
@@ -541,7 +607,7 @@ foreach ($categories as $cat) {
           <button form="edit-<?php echo $count ?>" type="submit">Update</button>
         </form>
         <br />
-        <form action="?p=panel" method="POST" id="del-<?php echo $count; ?>">
+        <form action="?panel" method="POST" id="del-<?php echo $count; ?>">
           <input type="hidden" name="del-title" value="<?php echo $chal['title']; ?>">
           <button form="del-<?php echo $count ?>" type="submit" onclick="return(confirm('Are you sure? Deleting this challenge will delete all user scores associated with it as well.'))">Delete</button>
         </form>

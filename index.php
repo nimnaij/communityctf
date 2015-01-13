@@ -91,10 +91,10 @@ function check_reg() {
 }
 
 function generate_registration_form() {
-  return '<div class="ucp"><div class="par"><h2>Register</h2><div class="container"><form action="?p=register" id="reg" method="POST"><div class="item"><label for="user">Handle:</label><input type="text" name="user"></div><div class="item"><label for="email">Email:</label><input type="email" name="email"></div><div class="item"><label for="pass">Password:</label><input type="password" name="pass"></div><div class="item"><label for="pass2">Confirm Password:</label><input type="password" name="pass2"></div><div class="item"><label for="org">Organization:</label><input type="text" name="org"></div><button form="reg" type="submit">Register</button></form></div></div>';
+  return '<div class="ucp"><div class="par"><h2>Register</h2><div class="container"><form action="?register" id="reg" method="POST"><div class="item"><label for="user">Handle:</label><input type="text" name="user"></div><div class="item"><label for="email">Email:</label><input type="email" name="email"></div><div class="item"><label for="pass">Password:</label><input type="password" name="pass"></div><div class="item"><label for="pass2">Confirm Password:</label><input type="password" name="pass2"></div><div class="item"><label for="org">Organization:</label><input type="text" name="org"></div><button form="reg" type="submit">Register</button></form></div></div>';
 }
 function generate_login_form() {
-  return '<div class="ucp"><div class="par"><h2>Login</h2><div class="container"><form action="?p=login" id="login" method="POST"><div class="item"><label for="user">Handle:</label><input type="textbox" name="user"></div><div class="item"><label for="pass">Password:</label><input type="password" name="pass"></div><button form="login" type="submit">Login</button></form></div></div>';
+  return '<div class="ucp"><div class="par"><h2>Login</h2><div class="container"><form action="?login" id="login" method="POST"><div class="item"><label for="user">Handle:</label><input type="textbox" name="user"></div><div class="item"><label for="pass">Password:</label><input type="password" name="pass"></div><button form="login" type="submit">Login</button></form></div></div>';
 }
 
 //TO DO: add email confirmation support.
@@ -226,11 +226,23 @@ function check_logged_in() {
   }
 }
 
+function get_page() {
+  if(count($_GET)>0) {
+    foreach ($_GET as $key => $code) {
+      if($code=="") {
+        return $key;
+      }
+    }
+    if(isset($_GET['p'])) {
+      return $_GET['p'];
+    }
+  } 
+  return "main";
+}
+
 function load_page() {
   global $output;
-  if(isset($_GET['p'])) {
-    $page = $_GET['p'];
-  } else $page = "main";
+  $page = get_page();
 
   if(LOGGED_IN) {
     switch($page){

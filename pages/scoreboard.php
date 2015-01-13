@@ -38,11 +38,14 @@ $mysqli->close();
     </tr>
 <?php 
 $count = 1;
-foreach ($scoreboard as $row) { ?>
-    <tr>
-      <td><?php echo $count;?></td><td><?php echo $row["name"];?></td><td><?php echo $row["org"];?></td><td><?php echo $row["score"];?></td>
-    </tr><?php 
-    $count++;} ?>
+if(isset($scoreboard)) {
+    foreach ($scoreboard as $row) { ?>
+      <tr>
+        <td><?php echo $count;?></td><td><?php echo $row["name"];?></td><td><?php echo $row["org"];?></td><td><?php echo $row["score"];?></td>
+      </tr><?php 
+      $count++;
+      } 
+} ?>
   </table>
 </div>
 

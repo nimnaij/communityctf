@@ -22,7 +22,7 @@ if($output != "") {
 } else { ?>
   <div class="textbox">
     <p>Welcome to communityCTF! Here, challenges aren't built by a single person, but come from the individuals. Each user is able to submit challenges; then others can compete on the challenge. The point system is self-scoring; the more times a challenge is solved, the less points it is worth.</p>
-    <p><a href="?p=login"><strong>Login</strong></a><br /><a href="?p=register"><strong>Register</strong></a></p>
+    <p><a href="?login"><strong>Login</strong></a><br /><a href="?register"><strong>Register</strong></a></p>
   </div>
 
 <?php } ?>

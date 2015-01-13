@@ -8,7 +8,7 @@ $categories = array();
 $user_scores = array();
 
 function gen_submission_form($chalid, $owner) { ?>
-      <form class="sub-form" method="POST" action="?p=challenges" id="sub-<?php echo $chalid."-".$owner;?>">
+      <form class="sub-form" method="POST" action="?challenges" id="sub-<?php echo $chalid."-".$owner;?>">
         <input type="hidden" name="sub-chal" value="<?php echo $chalid; ?>">
         <input type="hidden" name="sub-owner" value="<?php echo $owner;?>">
         <input type="textbox" value="" name="sub-flag">
